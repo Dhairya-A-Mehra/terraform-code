@@ -22,6 +22,9 @@ module "api_gateway" {
 
   review_service_lambda_invoke_arn = module.review_service.lambda_invoke_arn
   review_service_lambda_name = module.review_service.lambda_name
+
+  insights_lambda_invoke_arn = module.insights_lambda.lambda_invoke_arn
+  insights_lambda_name       = module.insights_lambda.lambda_name
 }
 
 output "api_url" {

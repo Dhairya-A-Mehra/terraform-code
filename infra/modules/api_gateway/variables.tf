@@ -27,5 +27,12 @@ variable "review_service_lambda_name" {
   type = string
 }
 
+variable "insights_lambda_invoke_arn" {
+  description = "Invoke ARN of insights Lambda"
+  type        = string
+}
 
-
+variable "insights_lambda_name" {
+  description = "Name of insights Lambda"
+  type        = string
+}

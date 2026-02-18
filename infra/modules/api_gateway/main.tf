@@ -116,3 +116,26 @@ resource "aws_cloudwatch_log_group" "api_logs" {
   retention_in_days = 14
 }
 
+resource "aws_apigatewayv2_integration" "insights" {
+  api_id                 = aws_apigatewayv2_api.this.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = var.insights_lambda_invoke_arn
+  integration_method     = "POST"
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_route" "insights" {
+  api_id    = aws_apigatewayv2_api.this.id
+  route_key = "GET /insights"
+
+  target = "integrations/${aws_apigatewayv2_integration.insights.id}"
+}
+
+resource "aws_lambda_permission" "allow_insights_api" {
+  statement_id  = "AllowAPIGatewayInvokeInsights"
+  action        = "lambda:InvokeFunction"
+  function_name = var.insights_lambda_name
+  principal     = "apigateway.amazonaws.com"
+
+  source_arn = "${aws_apigatewayv2_api.this.execution_arn}/*/*"
+}
