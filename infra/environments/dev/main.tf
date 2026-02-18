@@ -1,30 +1,32 @@
 module "dynamodb" {
-  source = "../../modules/dynamodb"
-
+  source     = "../../modules/dynamodb"
   table_name = "demo-app-table"
 }
 
 module "lambda" {
-  source = "../../modules/lambda"
-
+  source          = "../../modules/lambda"
   function_name   = "demo-app-lambda"
   lambda_zip_path = "../../lambda-code/function.zip"
 }
 
+module "cognito" {
+  source         = "../../modules/cognito"
+  user_pool_name = "reviewpulse-user-pool"
+  region         = "ca-central-1"
+}
+
 module "api_gateway" {
-  source = "../../modules/api_gateway"
-
-  api_name     = "review-platform-api"
-  lambda_arn   = module.lambda.lambda_arn
-  lambda_name  = module.lambda.lambda_name
-
-  route_key   = "POST /feedback"
-
+  source                           = "../../modules/api_gateway"
+  api_name                         = "review-platform-api"
+  lambda_arn                       = module.lambda.lambda_arn
+  lambda_name                      = module.lambda.lambda_name
+  route_key                        = "POST /feedback"
   review_service_lambda_invoke_arn = module.review_service.lambda_invoke_arn
-  review_service_lambda_name = module.review_service.lambda_name
-
-  insights_lambda_invoke_arn = module.insights_lambda.lambda_invoke_arn
-  insights_lambda_name       = module.insights_lambda.lambda_name
+  review_service_lambda_name       = module.review_service.lambda_name
+  insights_lambda_invoke_arn       = module.insights_lambda.lambda_invoke_arn
+  insights_lambda_name             = module.insights_lambda.lambda_name
+  cognito_user_pool_endpoint       = module.cognito.cognito_endpoint
+  cognito_client_id                = module.cognito.client_id
 }
 
 output "api_url" {
@@ -32,8 +34,7 @@ output "api_url" {
 }
 
 module "frontend" {
-  source = "../../modules/frontend"
-
+  source      = "../../modules/frontend"
   bucket_name = "demo-app-frontend-${random_id.suffix.hex}"
 }
 
@@ -46,8 +47,7 @@ output "website_url" {
 }
 
 module "cloudfront" {
-  source = "../../modules/cloudfront"
-
+  source             = "../../modules/cloudfront"
   bucket_domain_name = module.frontend.bucket_domain_name
 }
 
@@ -56,19 +56,16 @@ output "cdn_url" {
 }
 
 module "monitoring" {
-  source = "../../modules/monitoring"
-
+  source      = "../../modules/monitoring"
   lambda_name = module.lambda.lambda_name
 }
 
 module "processor_lambda" {
-  source = "../../modules/processor_lambda"
-
+  source          = "../../modules/processor_lambda"
   function_name   = "feedback-processor"
   lambda_zip_path = "../../lambda-code/processor.zip"
-
-  stream_arn  = module.dynamodb.stream_arn
-  table_name  = module.dynamodb.table_name
+  stream_arn      = module.dynamodb.stream_arn
+  table_name      = module.dynamodb.table_name
 }
 
 module "review_tokens" {
@@ -76,11 +73,24 @@ module "review_tokens" {
 }
 
 module "review_service" {
-  source = "../../modules/review_service"
-
+  source               = "../../modules/review_service"
   function_name        = "review-service"
   lambda_zip_path      = "../../lambda-code/review_service.zip"
   review_tokens_table  = module.review_tokens.review_tokens_table_name
   feedback_table       = module.dynamodb.table_name
 }
 
+module "insights_lambda" {
+  source          = "../../modules/insights_lambda"
+  lambda_role_arn = module.review_service.lambda_role_arn
+  table_name      = module.dynamodb.table_name
+  lambda_zip_path = "../../lambda-code/insights/insights.zip"
+}
+
+output "cognito_user_pool_id" {
+  value = module.cognito.user_pool_id
+}
+
+output "cognito_client_id" {
+  value = module.cognito.client_id
+}

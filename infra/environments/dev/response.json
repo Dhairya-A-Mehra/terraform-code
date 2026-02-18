@@ -1,0 +1,1 @@
+{"statusCode": 200, "body": "{\"total_reviews\": 1, \"avg_rating\": 4.0, \"sentiment_distribution\": {\"POSITIVE\": 100.0, \"NEGATIVE\": 0.0, \"NEUTRAL\": 0.0}, \"sentiment_score_label\": \"Excellent\", \"review_volume\": {\"2026-02\": 1}, \"sentiment_trend\": {\"2026-02\": {\"POSITIVE\": 1, \"NEGATIVE\": 0, \"NEUTRAL\": 0}}, \"top_themes\": {}}"}

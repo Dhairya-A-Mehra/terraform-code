@@ -34,8 +34,7 @@ resource "aws_apigatewayv2_integration" "review_service" {
   payload_format_version = "2.0"
 }
 
-
-# POST /simulate-purchase
+# POST /simulate-purchase — PUBLIC
 resource "aws_apigatewayv2_route" "simulate_purchase" {
   api_id    = aws_apigatewayv2_api.this.id
   route_key = "POST /simulate-purchase"
@@ -43,18 +42,24 @@ resource "aws_apigatewayv2_route" "simulate_purchase" {
   target = "integrations/${aws_apigatewayv2_integration.review_service.id}"
 }
 
-# GET /review
+# GET /review — PROTECTED
 resource "aws_apigatewayv2_route" "review_validate" {
-  api_id    = aws_apigatewayv2_api.this.id
-  route_key = "GET /review"
+  api_id               = aws_apigatewayv2_api.this.id
+  route_key            = "GET /review"
+  authorization_type   = "JWT"
+  authorizer_id        = aws_apigatewayv2_authorizer.cognito.id
+  authorization_scopes = ["aws.cognito.signin.user.admin"]
 
   target = "integrations/${aws_apigatewayv2_integration.review_service.id}"
 }
 
-# POST /submit-review
+# POST /submit-review — PROTECTED
 resource "aws_apigatewayv2_route" "submit_review" {
-  api_id    = aws_apigatewayv2_api.this.id
-  route_key = "POST /submit-review"
+  api_id               = aws_apigatewayv2_api.this.id
+  route_key            = "POST /submit-review"
+  authorization_type   = "JWT"
+  authorizer_id        = aws_apigatewayv2_authorizer.cognito.id
+  authorization_scopes = ["aws.cognito.signin.user.admin"]
 
   target = "integrations/${aws_apigatewayv2_integration.review_service.id}"
 }
@@ -72,19 +77,39 @@ resource "aws_apigatewayv2_stage" "default" {
     destination_arn = aws_cloudwatch_log_group.api_logs.arn
 
     format = jsonencode({
-      requestId = "$context.requestId"
-      status    = "$context.status"
-      latency   = "$context.responseLatency"
+      requestId      = "$context.requestId"
+      status         = "$context.status"
+      latency        = "$context.responseLatency"
+      routeKey       = "$context.routeKey"
+      integrationErr = "$context.integrationErrorMessage"
     })
   }
 
   default_route_settings {
     detailed_metrics_enabled = true
+    throttling_burst_limit   = 5000
+    throttling_rate_limit    = 10000
   }
 }
 
 ############################################
-# 4️⃣ Lambda Permissions
+# 4️⃣ JWT Authorizer (Cognito)
+############################################
+
+resource "aws_apigatewayv2_authorizer" "cognito" {
+  api_id           = aws_apigatewayv2_api.this.id
+  authorizer_type  = "JWT"
+  identity_sources = ["$request.header.Authorization"]
+  name             = "cognito-jwt-authorizer"
+
+  jwt_configuration {
+    audience = [var.cognito_client_id]
+    issuer   = var.cognito_user_pool_endpoint
+  }
+}
+
+############################################
+# 5️⃣ Lambda Permissions
 ############################################
 
 # Permission for Primary Lambda
@@ -108,13 +133,27 @@ resource "aws_lambda_permission" "allow_review_service_api" {
 }
 
 ############################################
-# 5️⃣ CloudWatch Logs
+# 6️⃣ CloudWatch Logs
 ############################################
 
 resource "aws_cloudwatch_log_group" "api_logs" {
   name              = "/aws/apigateway/${var.api_name}"
   retention_in_days = 14
 }
+
+resource "aws_cloudwatch_log_group" "review_service_lambda_logs" {
+  name              = "/aws/lambda/${var.review_service_lambda_name}"
+  retention_in_days = 14
+}
+
+resource "aws_cloudwatch_log_group" "insights_lambda_logs" {
+  name              = "/aws/lambda/${var.insights_lambda_name}"
+  retention_in_days = 14
+}
+
+############################################
+# 7️⃣ Insights Integration
+############################################
 
 resource "aws_apigatewayv2_integration" "insights" {
   api_id                 = aws_apigatewayv2_api.this.id
@@ -124,9 +163,13 @@ resource "aws_apigatewayv2_integration" "insights" {
   payload_format_version = "2.0"
 }
 
+# GET /insights — PROTECTED
 resource "aws_apigatewayv2_route" "insights" {
-  api_id    = aws_apigatewayv2_api.this.id
-  route_key = "GET /insights"
+  api_id               = aws_apigatewayv2_api.this.id
+  route_key            = "GET /insights"
+  authorization_type   = "JWT"
+  authorizer_id        = aws_apigatewayv2_authorizer.cognito.id
+  authorization_scopes = ["aws.cognito.signin.user.admin"]
 
   target = "integrations/${aws_apigatewayv2_integration.insights.id}"
 }

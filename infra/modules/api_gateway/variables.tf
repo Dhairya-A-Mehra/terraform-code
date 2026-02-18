@@ -36,3 +36,14 @@ variable "insights_lambda_name" {
   description = "Name of insights Lambda"
   type        = string
 }
+
+variable "cognito_user_pool_endpoint" {
+  description = "Cognito User Pool endpoint for JWT authorizer"
+  type        = string
+}
+
+variable "cognito_client_id" {
+  description = "Cognito App Client ID for JWT audience"
+  type        = string
+}
+

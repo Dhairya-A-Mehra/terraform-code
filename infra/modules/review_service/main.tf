@@ -1,6 +1,5 @@
 resource "aws_iam_role" "lambda_role" {
   name = "${var.function_name}-role"
-
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
@@ -20,7 +19,6 @@ resource "aws_iam_role_policy_attachment" "basic_execution" {
 
 resource "aws_iam_role_policy" "dynamodb_policy" {
   role = aws_iam_role.lambda_role.id
-
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
@@ -29,7 +27,8 @@ resource "aws_iam_role_policy" "dynamodb_policy" {
         Action = [
           "dynamodb:PutItem",
           "dynamodb:GetItem",
-          "dynamodb:UpdateItem"
+          "dynamodb:UpdateItem",
+          "dynamodb:Query"
         ],
         Resource = "*"
       }
@@ -41,12 +40,9 @@ resource "aws_lambda_function" "this" {
   function_name = var.function_name
   runtime       = "python3.11"
   handler       = "handler.lambda_handler"
-
   filename         = var.lambda_zip_path
   source_code_hash = filebase64sha256(var.lambda_zip_path)
-
   role = aws_iam_role.lambda_role.arn
-
   environment {
     variables = {
       REVIEW_TOKENS_TABLE = var.review_tokens_table
@@ -54,4 +50,3 @@ resource "aws_lambda_function" "this" {
     }
   }
 }
-
