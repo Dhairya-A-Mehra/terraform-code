@@ -29,10 +29,11 @@ resource "aws_apigatewayv2_api" "this" {
 resource "aws_apigatewayv2_integration" "review_service" {
   api_id                 = aws_apigatewayv2_api.this.id
   integration_type       = "AWS_PROXY"
-  integration_uri = var.review_service_lambda_invoke_arn
+  integration_uri        = var.review_service_lambda_invoke_arn
   integration_method     = "POST"
   payload_format_version = "2.0"
 }
+
 
 # POST /simulate-purchase
 resource "aws_apigatewayv2_route" "simulate_purchase" {
