@@ -31,22 +31,31 @@ resource "aws_iam_role_policy" "dynamodb_policy" {
           "dynamodb:Query"
         ],
         Resource = "*"
+      },
+      {
+        Effect = "Allow",
+        Action = ["ses:SendEmail", "ses:SendRawEmail"],
+        Resource = "*"
       }
     ]
   })
 }
 
 resource "aws_lambda_function" "this" {
-  function_name = var.function_name
-  runtime       = "python3.11"
-  handler       = "handler.lambda_handler"
+  function_name    = var.function_name
+  runtime          = "python3.11"
+  handler          = "handler.lambda_handler"
   filename         = var.lambda_zip_path
   source_code_hash = filebase64sha256(var.lambda_zip_path)
-  role = aws_iam_role.lambda_role.arn
+  role             = aws_iam_role.lambda_role.arn
+
   environment {
     variables = {
       REVIEW_TOKENS_TABLE = var.review_tokens_table
       FEEDBACK_TABLE      = var.feedback_table
+      FRONTEND_URL        = var.frontend_url
+      SENDER_EMAIL        = var.sender_email
     }
   }
 }
+

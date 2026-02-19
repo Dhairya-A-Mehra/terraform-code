@@ -33,17 +33,8 @@ output "api_url" {
   value = module.api_gateway.api_endpoint
 }
 
-module "frontend" {
-  source      = "../../modules/frontend"
-  bucket_name = "demo-app-frontend-${random_id.suffix.hex}"
-}
-
 resource "random_id" "suffix" {
   byte_length = 4
-}
-
-output "website_url" {
-  value = module.frontend.website_url
 }
 
 module "cloudfront" {
@@ -53,6 +44,16 @@ module "cloudfront" {
 
 output "cdn_url" {
   value = module.cloudfront.distribution_url
+}
+
+module "frontend" {
+  source                      = "../../modules/frontend"
+  bucket_name                 = "demo-app-frontend-${random_id.suffix.hex}"
+  cloudfront_distribution_arn = module.cloudfront.distribution_arn
+}
+
+output "website_url" {
+  value = module.frontend.website_url
 }
 
 module "monitoring" {
@@ -72,12 +73,19 @@ module "review_tokens" {
   source = "../../modules/review_tokens"
 }
 
+module "ses" {
+  source       = "../../modules/ses"
+  sender_email = "mpdhairyamehra000942@gmail.com"
+}
+
 module "review_service" {
-  source               = "../../modules/review_service"
-  function_name        = "review-service"
-  lambda_zip_path      = "../../lambda-code/review_service.zip"
-  review_tokens_table  = module.review_tokens.review_tokens_table_name
-  feedback_table       = module.dynamodb.table_name
+  source              = "../../modules/review_service"
+  function_name       = "review-service"
+  lambda_zip_path     = "../../lambda-code/review_service.zip"
+  review_tokens_table = module.review_tokens.review_tokens_table_name
+  feedback_table      = module.dynamodb.table_name
+  frontend_url        = module.cloudfront.distribution_url
+  sender_email        = module.ses.sender_email
 }
 
 module "insights_lambda" {

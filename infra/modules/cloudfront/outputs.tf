@@ -13,3 +13,7 @@ output "distribution_url" {
   value       = "https://${aws_cloudfront_distribution.frontend.domain_name}"
 }
 
+output "distribution_arn" {
+  description = "CloudFront distribution ARN for S3 bucket policy"
+  value       = aws_cloudfront_distribution.frontend.arn
+}

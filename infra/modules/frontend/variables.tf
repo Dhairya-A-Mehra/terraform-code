@@ -3,3 +3,7 @@ variable "bucket_name" {
   type        = string
 }
 
+variable "cloudfront_distribution_arn" {
+  description = "ARN of CloudFront distribution for OAC bucket policy"
+  type        = string
+}

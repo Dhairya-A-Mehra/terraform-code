@@ -4,26 +4,7 @@ resource "aws_apigatewayv2_api" "this" {
 }
 
 ############################################
-# 1️⃣ Primary Lambda Integration (Existing)
-############################################
-
-#resource "aws_apigatewayv2_integration" "primary_lambda" {
- # api_id                 = aws_apigatewayv2_api.this.id
-  #integration_type       = "AWS_PROXY"
-  #integration_uri        = var.lambda_arn
-  #integration_method     = "POST"
-  #payload_format_version = "2.0"
-#}
-
-#resource "aws_apigatewayv2_route" "primary_route" {
-#  api_id    = aws_apigatewayv2_api.this.id
-#  route_key = var.route_key
-#
-#  target = "integrations/${aws_apigatewayv2_integration.primary_lambda.id}"
-#}
-
-############################################
-# 2️⃣ Review Service Integration
+# 1️⃣ Review Service Integration
 ############################################
 
 resource "aws_apigatewayv2_integration" "review_service" {
@@ -42,30 +23,24 @@ resource "aws_apigatewayv2_route" "simulate_purchase" {
   target = "integrations/${aws_apigatewayv2_integration.review_service.id}"
 }
 
-# GET /review — PROTECTED
+# GET /review — PUBLIC
 resource "aws_apigatewayv2_route" "review_validate" {
-  api_id               = aws_apigatewayv2_api.this.id
-  route_key            = "GET /review"
-  authorization_type   = "JWT"
-  authorizer_id        = aws_apigatewayv2_authorizer.cognito.id
-  authorization_scopes = ["aws.cognito.signin.user.admin"]
+  api_id    = aws_apigatewayv2_api.this.id
+  route_key = "GET /review"
 
   target = "integrations/${aws_apigatewayv2_integration.review_service.id}"
 }
 
-# POST /submit-review — PROTECTED
+# POST /submit-review — PUBLIC
 resource "aws_apigatewayv2_route" "submit_review" {
-  api_id               = aws_apigatewayv2_api.this.id
-  route_key            = "POST /submit-review"
-  authorization_type   = "JWT"
-  authorizer_id        = aws_apigatewayv2_authorizer.cognito.id
-  authorization_scopes = ["aws.cognito.signin.user.admin"]
+  api_id    = aws_apigatewayv2_api.this.id
+  route_key = "POST /submit-review"
 
   target = "integrations/${aws_apigatewayv2_integration.review_service.id}"
 }
 
 ############################################
-# 3️⃣ Default Stage
+# 2️⃣ Default Stage
 ############################################
 
 resource "aws_apigatewayv2_stage" "default" {
@@ -93,7 +68,7 @@ resource "aws_apigatewayv2_stage" "default" {
 }
 
 ############################################
-# 4️⃣ JWT Authorizer (Cognito)
+# 3️⃣ JWT Authorizer (Cognito)
 ############################################
 
 resource "aws_apigatewayv2_authorizer" "cognito" {
@@ -109,18 +84,8 @@ resource "aws_apigatewayv2_authorizer" "cognito" {
 }
 
 ############################################
-# 5️⃣ Lambda Permissions
+# 4️⃣ Lambda Permissions
 ############################################
-
-# Permission for Primary Lambda
-#resource "aws_lambda_permission" "allow_primary_api" {
-#  statement_id  = "AllowAPIGatewayInvokePrimary"
-#  action        = "lambda:InvokeFunction"
-#  function_name = var.lambda_name
-#  principal     = "apigateway.amazonaws.com"
-#
-#  source_arn = "${aws_apigatewayv2_api.this.execution_arn}/*/*"
-#}
 
 # Permission for Review Service Lambda
 resource "aws_lambda_permission" "allow_review_service_api" {
@@ -133,7 +98,7 @@ resource "aws_lambda_permission" "allow_review_service_api" {
 }
 
 ############################################
-# 6️⃣ CloudWatch Logs
+# 5️⃣ CloudWatch Logs
 ############################################
 
 resource "aws_cloudwatch_log_group" "api_logs" {
@@ -152,7 +117,7 @@ resource "aws_cloudwatch_log_group" "insights_lambda_logs" {
 }
 
 ############################################
-# 7️⃣ Insights Integration
+# 6️⃣ Insights Integration — PROTECTED
 ############################################
 
 resource "aws_apigatewayv2_integration" "insights" {
@@ -163,7 +128,7 @@ resource "aws_apigatewayv2_integration" "insights" {
   payload_format_version = "2.0"
 }
 
-# GET /insights — PROTECTED
+# GET /insights — PROTECTED (JWT Required)
 resource "aws_apigatewayv2_route" "insights" {
   api_id               = aws_apigatewayv2_api.this.id
   route_key            = "GET /insights"
