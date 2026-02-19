@@ -1,10 +1,36 @@
 resource "aws_apigatewayv2_api" "this" {
   name          = var.api_name
   protocol_type = "HTTP"
+
+  cors_configuration {
+    allow_origins = ["https://d3oswpc3djj2j8.cloudfront.net"]
+    allow_methods = ["GET", "POST", "OPTIONS"]
+    allow_headers = ["Content-Type", "Authorization"]
+    max_age       = 300
+  }
 }
 
 ############################################
-# 1️⃣ Review Service Integration
+# 1️⃣ Primary Lambda Integration (Existing)
+############################################
+
+#resource "aws_apigatewayv2_integration" "primary_lambda" {
+ # api_id                 = aws_apigatewayv2_api.this.id
+  #integration_type       = "AWS_PROXY"
+  #integration_uri        = var.lambda_arn
+  #integration_method     = "POST"
+  #payload_format_version = "2.0"
+#}
+
+#resource "aws_apigatewayv2_route" "primary_route" {
+#  api_id    = aws_apigatewayv2_api.this.id
+#  route_key = var.route_key
+#
+#  target = "integrations/${aws_apigatewayv2_integration.primary_lambda.id}"
+#}
+
+############################################
+# 2️⃣ Review Service Integration
 ############################################
 
 resource "aws_apigatewayv2_integration" "review_service" {
@@ -40,7 +66,7 @@ resource "aws_apigatewayv2_route" "submit_review" {
 }
 
 ############################################
-# 2️⃣ Default Stage
+# 3️⃣ Default Stage
 ############################################
 
 resource "aws_apigatewayv2_stage" "default" {
@@ -68,7 +94,7 @@ resource "aws_apigatewayv2_stage" "default" {
 }
 
 ############################################
-# 3️⃣ JWT Authorizer (Cognito)
+# 4️⃣ JWT Authorizer (Cognito)
 ############################################
 
 resource "aws_apigatewayv2_authorizer" "cognito" {
@@ -84,10 +110,18 @@ resource "aws_apigatewayv2_authorizer" "cognito" {
 }
 
 ############################################
-# 4️⃣ Lambda Permissions
+# 5️⃣ Lambda Permissions
 ############################################
 
-# Permission for Review Service Lambda
+#resource "aws_lambda_permission" "allow_primary_api" {
+#  statement_id  = "AllowAPIGatewayInvokePrimary"
+#  action        = "lambda:InvokeFunction"
+#  function_name = var.lambda_name
+#  principal     = "apigateway.amazonaws.com"
+#
+#  source_arn = "${aws_apigatewayv2_api.this.execution_arn}/*/*"
+#}
+
 resource "aws_lambda_permission" "allow_review_service_api" {
   statement_id  = "AllowAPIGatewayInvokeReview"
   action        = "lambda:InvokeFunction"
@@ -98,7 +132,7 @@ resource "aws_lambda_permission" "allow_review_service_api" {
 }
 
 ############################################
-# 5️⃣ CloudWatch Logs
+# 6️⃣ CloudWatch Logs
 ############################################
 
 resource "aws_cloudwatch_log_group" "api_logs" {
@@ -117,7 +151,7 @@ resource "aws_cloudwatch_log_group" "insights_lambda_logs" {
 }
 
 ############################################
-# 6️⃣ Insights Integration — PROTECTED
+# 7️⃣ Insights Integration
 ############################################
 
 resource "aws_apigatewayv2_integration" "insights" {
@@ -128,7 +162,7 @@ resource "aws_apigatewayv2_integration" "insights" {
   payload_format_version = "2.0"
 }
 
-# GET /insights — PROTECTED (JWT Required)
+# GET /insights — PROTECTED
 resource "aws_apigatewayv2_route" "insights" {
   api_id               = aws_apigatewayv2_api.this.id
   route_key            = "GET /insights"
@@ -147,3 +181,4 @@ resource "aws_lambda_permission" "allow_insights_api" {
 
   source_arn = "${aws_apigatewayv2_api.this.execution_arn}/*/*"
 }
+
